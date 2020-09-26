@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Making ugly imperative pretty functional in Java"
-date:   2020-00-26 22:00:00 +0100
+date:   2020-09-26 22:00:00 +0100
 categories: entry
 ---
 
@@ -20,7 +20,8 @@ makeMyPhraseSmartRegex("Link & Zelda"); // -> returns "Link (and|&) Zelda"
 My first implementation was fairly clean, although looking back a `reduce` may have been prettier here (but that's spoilers for later!):
 ```java
 public class RegexComponent{
-    // configured known special synonims. (By the way, it may be better to make this environmentally configurable, if you have a similar problem ;) )
+    // configured known special synonims. (By the way, it may be better to make this environmentally
+    // configurable, if you have a similar problem ;) )
     private Map<String, List<String>> knownSynonims = Map.of("&", List.of("and"), " and ", List.of(" & "));
 
     public String makeMyPhraseSmartRegex(final String string){
@@ -60,6 +61,7 @@ I was fairly happy with my approach, but as I began to type it out, I could see 
 
 ```java
 public class RegexComponent{
+    ...
     private Map<String, List<String>> knownSynonims = Map.of("&", List.of("and"), " and ", List.of(" & "));
 
     public String makeMyPhraseSmartRegex(final String word) {
@@ -84,7 +86,7 @@ public class RegexComponent{
     }
 
     private String addWordBoundaries(final String input) {
-        return String.format(BOUNDARY_ENCLOSURE_FORMAT, input);
+        // functionality for wrapping regex phrase in word boundaries
     }
 
     private String convertEntryToRegexOrCriteria(Entry<String, List<String>> entry){
@@ -131,7 +133,7 @@ public class RegexComponent {
     }
 
     private String makeStringRegexSafe(final String string) {
-        return REGEX_METACHARACTERS.matcher(string).replaceAll("\\\\$0");
+        // functionality for escaping regex special characters
     }
 
     private Stream<String> splitStringIntoStreamBySpecialWords(final String string) {
@@ -205,7 +207,7 @@ public class RegexComponent {
     }
 
     private String makeStringRegexSafe(final String string) {
-        return REGEX_METACHARACTERS.matcher(string).replaceAll("\\\\$0");
+        // functionality for escaping regex special characters
     }
 
     private Stream<String> splitStringIntoStreamBySpecialWords(final String string) {
@@ -273,4 +275,4 @@ but coming to an intuitive appreciation for a "pretty" functional appraoch (see 
 Ofcouse, I'm sure purists can point out a number of reasons why this isn't proper functional programming, but there's a really nice takeaway here for 
 a junior Java developer. Breaking your imperative methods into smaller abstract chunks is already a good practice for making code maintaible, testable, 
 understandable, simpler... the list goes on, but an added side effect is that it puts a lot of implementations following this pattern in a strong position
-to utilise Java's functional programming capabilities. Just keep your methods unary if you can... anything else looks gross! ;)
+to utilise Java's functional programming capabilities. Just keep your methods unary if you can... anything else looks gross! :bento:
