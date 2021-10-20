@@ -25,3 +25,34 @@ conversely, the concepts of OOP become more and more applicable to services. Thi
 
 We're seeing an uptick in tendency away from OOP and towards functional, but I think that's a reflection of the landscape tending towards small services, as opposed to anything against OOP. As such I think it's important and useful to make distinctions of when to use each, but keep strict disciple in a team to know how to distinguish both.
 
+
+# The problem with OOP autonomy
+
+- Because OOP has a focus on encapsulation and obsfucation, it typically means that member functions have a great deal of power:
+    they get to do behaviour while looking at the internals of the object itself. Static methods also have this privelidge, but if misused becomes a big antipattern. 
+    This then means we begin to encounter a strange situation. Individual objects need to have a lot of dominion over what they are doing in order to be able obfuscate effectively. That's an odd sentence, but it's probably better explained with an example.
+    Let's say I have a service class, and I want to create a new entity:
+    ```java
+        final MyService myService = new Myservice();
+        myService.createEntity(entityCreationInputs);
+        // can throw an exception, or allow the entity to be created
+    ```
+    This is fine, and a great use of Singleton-ey OOP. The service has control over what will happen here. Let's compare this to something like adding two vectors:
+    ```java
+        final Vector2 vec1 = new Vector2(0,0);
+        final Vector2 vec2 = new Vector2(1,1);
+    ```
+    How would write a method which returns a new vector which is the sum of these two?
+    Maybe something like this:
+    ```java
+        final Vector2 sum = vec1.plus(vec2);
+        // or
+        UtilPackage.addVectors(vec1, vec2);
+    ```
+    Looking at the second one, we can start to see where this becomes an issue. A Vector is a pretty concrete type, but if we follow java bean convention, we need setters and getters just to get to it's attributes. For a third party package to be able to do straight forward computations on a concrete struct-like class, all of a sudden you need to make sure your encapsulation is all correctly aligned, and for no real gain.
+
+    This is an example where any kind of external operation can really be impinged upon by encapsulation. As you go further away from issuing commands to an object, and find yourself using the objects attributes, it may be a sign that the autonomy of the class isn't that high. Ofcourse, there are many examples were objects individually behave much more complex, so the layer of encapsulation is essential to keep their internals decoupled from the things using them.
+
+    One pattern I've come across is single CRUD services which pass are at some point before invocation passed through an external validation layer. To me, this is the service equivalent of objects-used-as-records. When you see this, it means your services are being handled (potentially) too much externally, and they need to have their autonomy brought back in.
+
+    One example of this was Targeting, and the work done to pull that in.
