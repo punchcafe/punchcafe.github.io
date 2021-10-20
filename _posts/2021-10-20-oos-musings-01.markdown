@@ -1,0 +1,27 @@
+---
+layout: post
+title:  "Object Oriented Services musings"
+date:   2021-10-20 22:00:00 +0100
+categories: entry
+---
+
+#Elixir Influence
+
+- Elixir influence by way of Contexts. A struct, with a number of associated functions.
+- When we think of Elixir polymorphism, it's more to do with passing the object to all sorts of functions 
+which transform it, but we aren't necessarily concerned with _what_ the data shape is. We delegate understanding of how
+to use it's structure to the function. So step out of the function and we have some of the similar concepts of OOP's 
+_abstraction_, just without the encapsulation.
+- Encapsulation is a very strong property for making resiliant over time large monoliths, were software components are decoupled, 
+and things using objects are more like a client. As code bases get smaller and smaller, the interaction between different code components, modules or classes, may become smaller. When we start to share models, these things can become cumbersome, and the layers abstraction can sometimes become damaging.
+- The struct / function context approach thus becomes more and more appealing as individual codebases become smaller and smaller.
+conversely, the concepts of OOP become more and more applicable to services. This is part of what makes RPC protocols very appealing.
+- When we consider Java spring boot apps, we often find ourselves creating an abundance of `@Component`, and how many times have we created a component called `MyService`. We make this ecosystem of app "singletons", where we'll define a Class, hell maybe an interface, to guarantee client classes have a layer of decoupling, instead of having to do internals themselves. When we consider it, this is exactly what microservices tend towards, with all the tennants of good OOP practices being applicable to individual services.
+- This is far more of a sliding scale than a fixed thing. Consider the following cases:
+    -> An intermediate layer which calls a bunch of other services, which needs to undero transformative steps: here's an example where OOP can be cumbersome. We don't need setters, or getters or obfuscation, we just want to manipulate a number of concrete data structures we're getting from various sources.
+    -> A subset of Domain Entities which are relational and have business-logic relations: Here, The Service itself _does_ benefit from an OOP style, as we have different domains internally, which may need to share a single database connection and some models,
+    so something like Java is nice for building out something maintainable, self documenting, and extendable.
+    -> A single domain entity service, where all we want to do is expose the "data model": A common pattern is to have a single service responsible for CRUD functionality. This is a little dangerous as you can end up stretching your bounding context over several services (big pain), but when it's somethign unrelated, it's fine. In this case, You're most likely just going to be wiring up your API to dispatch a specific function, so a struct and functional approach is good.
+
+We're seeing an uptick in tendency away from OOP and towards functional, but I think that's a reflection of the landscape tending towards small services, as opposed to anything against OOP. As such I think it's important and useful to make distinctions of when to use each, but keep strict disciple in a team to know how to distinguish both.
+

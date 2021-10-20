@@ -5,7 +5,7 @@ layout: post
 ## Manifest Stuff
 ```
 // explains elements in the object manifest
-kubectl explain pods 
+kubectl explain pods
 
 // explains sub-elements in more detail (in this case spec)
 kubectl explain pod.spec
