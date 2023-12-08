@@ -1,91 +1,73 @@
-# SQL: Declaritve to Code
+For a long time, "getting" SQL has eluded me.
+I could statements and understood underlying basics around performance, but I couldn't have said it was a _problem solving tool_ to me.
+It was more just a way to save and retrieve data in my applications, and anything more complex than that required working out the right combination of arcane incantations to paste together the query I needed. A few recent serendipidous events at work and in my own research has led me to finally have that a-ha moment where SQL has gone from something I kinda know, to something I kinda get, so I wanted to share that in case it makes anyone else's advantures in SQL easier.
 
-I've been putting off getting better at SQL for about two years now. Each new year, it manages to make it's way back on to my to-do list, yet never finds the attention it deserves.
-I'm a back end engineer so I really should be better with it and yet it's bizarre combinations of clauses has always left me at a loss. It's never _felt_ like coding, until I recently finally started putting that new years resolution. Skip ahead a number of Codewars kata,  _really_ y2k Oracle documentation pages and a handful of blog posts, and I feel I'm really starting to _get it_. 
+Enough introduction. Let's get going with the biggest ah-ha inducer: getting the SELECT FROM WHERE statement. 
 
-I'm hoping this blog post can do the same for anyone in a similar position, and give you that ah-ha click to allow you to start thinking of SQL interms of _lines of instructions_. you have a solid coding foundation and some SQL fundamentals. `SELECT`s, `GROUP BY`s and `JOIN`s should all be things you are aware of and have used a few times.
+Let's introduce our hypothetical business which needs to use SQL for all it's business needs. The Apocafe is a Apocathary selling a variety of potions, of which Coffee is their most popular. Their database consists of just two tables, `potions` and `orders`. Let's peek at the schemas of those tables quickly: 
 
-# The Schema
-Let's start out blog by introducing a fictional schema. My professional experience is Elixir and Java, so let's say we're building a database for a Coffee Shop which sells potions (of which, coffee is one). Let's introduce our first table: `potions`.
+SCHEMA
 
-```sql
-CREATE TABLE potions(
-    elixir_name varchar(255),
-    id int,
-    price float,
-    bottle_volume_ml float,
-    category varchar(255)
-)
+A problem the cafe is facing is very limited storage space for stock. Climate control for potions is expensive! The cafe decides it's going to only stock products which have the highest price/volume. Sabrina, their Data Analyst witch, is asked to write an SQL query to return a list of products ordered by their price/volume.
+
+
+BUT why doesn't it work??
+
+There's two parts to that answer: First is that each clause (SELECT, FROM, WHERE...) in the query is actually executed in a specifc order. Second is that the execution of each of those steps can **transform the data passed to the next step.**
+
+Firstly, ordering. Each SELECT - FROM - WHERE statement is made up of clauses. The [Oracle documentation](https://docs.oracle.com/javadb/10.8.3.0/ref/rrefselectexpression.html#rrefselectexpression) makes it easy to see what our anatomy of the clause is:
 ```
-
-Let's start with a simple SQL query. Our alchemist staff have limited space in their store room. Magical climate control is very expensive, so they want to know what their most expensive price-per-volume goods are: 
-
-```sql
-SELECT 
-  elixir_name, 
-  price,
-  price / bottle_volume AS cost_per_ml
-FROM
-  potions
-ORDER BY
-  cost_per_ml
-```
-
-This works fine, but the staff want to tweak the query. They know it's a bad idea to just stock one variety of potion, so they want find _all_ potions which are above a certain cost-per-volume threshold:
-
-```sql
-SELECT 
-  elixir_name, 
-  price,
-  price / bottle_volume AS cost_per_ml
-FROM
-  potions
-WHERE
-  cost_per_ml > 50.0
-```
-
-Huh? That doesn't work:
-```
-ERROR OUTPUT
-```
-
-Why was `cost_per_ml` fine when it was in the `ORDER BY` clause but not the `WHERE` clause?
-The answer lies in the first major sleight-of-hand in SQL; SELECT FROM clauses have an implicit ordering of execution to their component clauses, and each execution step affects what's available to the step after it.
-
-```
-    1. FROM/JOIN
-    2. WHERE
-    3. GROUP BY
-    4. HAVING
-    5. SELECT
-    6. ORDER BY
-    7. LIMIT/OFFSET
-```
-In the above query, we introduce the `cost_per_ml` field in the `SELECT` step. The SELECT step is before the ORDER BY step, but after the WHERE step, so it makes sense that our first query succeeded, but our second query failed: the column just wasn't available in the where clause.
-
-Let's imagine this as code.
-First, the dataset:
-```elixir
-@type dataset :: {rows :: [tuple], available_columns :: [String.t()]}
+SELECT [ DISTINCT | ALL ] SelectItem [ , SelectItem ]*
+FROM clause
+[ WHERE clause ]
+[ GROUP BY clause ]
+[ HAVING clause ]
+[ ORDER BY clause ]
+[ result offset clause ]
+[ fetch first clause ]
 ``` 
-Loosely imagine our table data as a big bunch of rows, with a set of columns. Each step in the query can make transformations, but the result will be another bunch of rows and columns.
-
-Let's model those functions. Each function accepts a type, `dataset` (our floaty model), some other args, and returns an object of type `dataset`. The only exception to this is `FROM`, as this is our data source. So our very first query can be written like this:
-
-```elixir
-defmodule SelectQuery do
-
-    def query() do
-      "potions"
-      |> from() # {[..rows..], [:elixir_name, :price, :id, :category, :bottle_volume_ml]}
-      |> select(["elixir_name", "price", "price / bottle AS cost_per_ml"])
-      |> order_by("cost_per_ml")
-    end
-    ...
-  
-end
+For the scope of this blog, we're going to ignore the result off set and fetch first fields, and focus entirely on `SELECT`, `FROM`, `WHERE`, `GROUP BY`, `HAVING` and `ORDER BY`. They have the following order:
 ```
+1. FROM/JOIN
+2.   WHERE
+3.   GROUP BY
+4.   HAVING
+5.  SELECT
+6.   ORDER BY
+```
+Remember what I said a minute ago? Each of these steps will **transform** the data sent to the next step. So let's think of our original queries again, but this time think of them as a pipeline of **ordered** transformations:
 
-BUT SELECT is last.
-Let's illustrate this by changing the where clause.
-What about order by??
+```
+FROM(products) -> SELECT(price / bottle_volume AS cost_per_ml) -> ORDER BY(cost_per_ml)
+FROM(products) -> WHERE(cost_per_ml > 5) -> SELECT(price / bottle_volume AS cost_per_ml)
+```
+That starts to make a bit more intuitive sense. The WHERE clause is trying to filter on something which isn't introduced until the select clause.
+
+Let's start trying to build a mental model of our "data" and "transformations" actually happening here. We can think of data as the contents of a table to begin with. This isn't always the case, but the model of "data" being a series of rows with named columns is a good start to understand how it's transformed. Breaking down the first pipeline above:
+```
+FROM products
+```
+We start off with our vanilla table in SQL, which has all the original columns:
+
+[ ] TABLE
+
+Then it goes into the select clause...
+```
+SELECT ...
+```
+This takes **all** the rows in the table, only keeps the `x`, `y`, columns, and also creates a new column for each row, `price_per_ml`:
+
+[ ] TABLE
+
+
+Finally it goes through the ORDER BY clause:
+```
+ORDER BY
+```
+This just orders all by the new `price_per_ml` column. At this point, the select has omitted origal columns, so let's see what happens if we try and order by something not on it:
+
+TEST
+
+
+Query concept: https://docs.oracle.com/javadb/10.8.3.0/ref/rrefsqlj21571.html#rrefsqlj21571
+SELECT FROM WHERE expression: https://docs.oracle.com/javadb/10.8.3.0/ref/rrefselectexpression.html#rrefselectexpression
